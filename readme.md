@@ -5,9 +5,9 @@ Python script to convert pictures to colored ascii!
 Required - pillow lib
 
 ```
-python .\main.py -h
+> python .\main.py -h
 
-usage: main.py [-h] [-w W] [-e E] [-t T] [-d D] [-l] [-b] filename
+usage: main.py [-h] [-w W] [-e E] [-t T] [-d D] [-l] [-s] filename
 
 PIC2ASCII
 
@@ -21,5 +21,5 @@ options:
   -t T        edge threshold, default = 1.5
   -d D        dim color, default = 1.0
   -l          use lightness instead of value to select char
-  -b          output as separate arrays color[r,g,b] and char
+  -s          output as separate arrays color[r,g,b] and char
 ```

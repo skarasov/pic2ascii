@@ -89,23 +89,39 @@ def grayscale(img_data: list[tuple[int, int, int]], w: int, h: int) -> list[floa
 def main() -> None:
     parser = argparse.ArgumentParser(description="pic2ascii")
     parser.add_argument("filename", type=str, help="picture filename")
-    parser.add_argument("-w", type=int, help="width in chars to fit picture [60]", default=60)
-    parser.add_argument("-e", type=int, help="height in chars to fit picture [30]", default=30)
-    parser.add_argument("-t", type=float, help="edge threshold [1.5]", default=1.5)
+    parser.add_argument("-w", type=int, help="width in chars to fit picture, default = 60", default=60)
+    parser.add_argument("-e", type=int, help="height in chars to fit picture, default = 30", default=30)
+    parser.add_argument("-t", type=float, help="edge threshold, default = 1.5", default=1.5)
+    parser.add_argument("-d", type=float, help="dim color, default = 1.0", default=1.0)
     parser.add_argument("-l", help="use lightness instead of value to select char", action="store_true")
+    parser.add_argument("-s", help="output as separate arrays color[r,g,b] and char", action="store_true")
     args = parser.parse_args()
+
+    if args.w <= 0 or args.e <= 0:
+        print("arguments W and E must be > 0")
+        return
+    if args.t < 0.0:
+        print("argument T must be >= 0")
+        return
+    if args.d < 0.0 or args.d > 1.0:
+        print("argument D must be in [0.0 .. 1.0]")
+        return
 
     image = Image.open(args.filename)
     # real H / 2
-    k = max(image.width / args.w, image.height / 2 / args.e)
+    k = max(image.width / args.w, image.height / 2.0 / args.e)
     width = int(image.width / k + 0.5)
     height = int(image.height / 2.0 / k + 0.5)
     edge_threshold_square = args.t * args.t
     value_charset_count = len(value_charset)
-    print(f"[{width = } {height = }]")
+    if not args.s:
+        print(f"\x1b[2J\x1b[1;1H")
+    print(f"{width} {height}")
     img_data = list(image.resize((width, height)).getdata())  # list of tuples
     sobel_x, sobel_y = calc_sobels(grayscale(img_data, width, height), width, height)
 
+    buf = []
+    cbuf = []
     for y in range(0, height):
         for x in range(0, width):
             pix_idx = y * width + x
@@ -117,13 +133,25 @@ def main() -> None:
             sobel_magnitude_square = sx * sx + sy * sy
             sobel_angle = (math.atan2(sy, sx) * 180.0 / math.pi + 180.0 + 22.5) % 360.0
 
-            print(f"\x1b[38;2;{r};{g};{b}m", end="")
-            if sobel_magnitude_square >= edge_threshold_square:
-                print(edge_charset[int(sobel_angle / 45.0 + 0.5) - 1], end="")
+            if args.s:
+                cbuf.append(f"{int(r * args.d + 0.5)} {int(g * args.d + 0.5)} {int(b * args.d + 0.5)} ")
+                if sobel_magnitude_square >= edge_threshold_square:
+                    buf.append(edge_charset[int(sobel_angle / 45.0 + 0.5) - 1])
+                else:
+                    buf.append(value_charset[int(v * value_charset_count - 1)])
             else:
-                print(value_charset[int(v * value_charset_count - 1)], end="")
-        print(" ")
-    print("\x1b[0m")
+                print(f"\x1b[38;2;{int(r * args.d + 0.5)};{int(g * args.d + 0.5)};{int(b * args.d + 0.5)}m", end="")
+                if sobel_magnitude_square >= edge_threshold_square:
+                    print(edge_charset[int(sobel_angle / 45.0 + 0.5) - 1], end="")
+                else:
+                    print(value_charset[int(v * value_charset_count - 1)], end="")
+        if not args.s:
+            print(" ")
+    if args.s:
+        print("".join(cbuf))
+        print("".join(buf))
+    else:
+        print("\x1b[0m")
 
 
 if __name__ == "__main__":
