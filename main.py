@@ -4,14 +4,14 @@ import argparse
 
 
 # value_charset = [" ",".","~","=","+","x","*","#","%","@"]
-value_charset = [" ",".",",","-","~","=","+","x","o","*","0","$","X","#","%","@"]
+value_charset: list[str] = [" ",".",",","-","~","=","+","x","o","*","0","$","X","#","%","@"]
 
 #        112.5 90 67.5
 #   157.5 \    _   /   22.5
 # 180 |                |   0
 #   202.5 /     _   \   337.5
 #        247.5 270  292.5
-edge_charset = ["|", "/", "_", "\\", "|", "/", "_", "\\"]
+edge_charset: list[str] = ["|", "/", "_", "\\", "|", "/", "_", "\\"]
 
 
 # term colors: "\x1b[32;40m"
@@ -54,30 +54,30 @@ edge_charset = ["|", "/", "_", "\\", "|", "/", "_", "\\"]
 
 
 def calc_convolution(gs_data: list[float], x: int, y: int, w: int) -> tuple[float, float]:
-    z1 = gs_data[(y - 1) * w + x - 1]
-    z2 = gs_data[y * w + x - 1]
-    z3 = gs_data[(y + 1) * w + x - 1]
-    z4 = gs_data[(y - 1) * w + x]
-    z6 = gs_data[(y + 1) * w + x]
-    z7 = gs_data[(y - 1) * w + x + 1]
-    z8 = gs_data[y * w + x + 1]
-    z9 = gs_data[(y + 1) * w + x + 1]
+    z1: float = gs_data[(y - 1) * w + x - 1]
+    z2: float = gs_data[y * w + x - 1]
+    z3: float = gs_data[(y + 1) * w + x - 1]
+    z4: float = gs_data[(y - 1) * w + x]
+    z6: float = gs_data[(y + 1) * w + x]
+    z7: float = gs_data[(y - 1) * w + x + 1]
+    z8: float = gs_data[y * w + x + 1]
+    z9: float = gs_data[(y + 1) * w + x + 1]
 
-    gx = (z7 + 2 * z8 + z9) - (z1 + 2 * z2 + z3)
-    gy = (z3 + 2 * z6 + z9) - (z1 + 2 * z4 + z7)
+    gx: float = (z7 + 2 * z8 + z9) - (z1 + 2 * z2 + z3)
+    gy: float = (z3 + 2 * z6 + z9) - (z1 + 2 * z4 + z7)
     return (gx, gy)
 
 
 def calc_sobels(gs_data: list[float], w: int, h: int) -> tuple[list[float], list[float]]:
     sx: list[float] = [0.0 for _ in range(0, h * w)]
-    sy: list[float]= [0.0 for _ in range(0, h * w)]
+    sy: list[float] = [0.0 for _ in range(0, h * w)]
     for y in range(1, h - 1):
         for x in range(1, w - 1):
             sx[y * w + x], sy[y * w + x] = calc_convolution(gs_data, x, y, w)
     return (sx, sy)
 
 
-def grayscale(img_data: list[tuple[int, int, int]], w: int, h: int) -> list[float]:
+def grayscale(img_data: list[tuple[int, ...]], w: int, h: int) -> list[float]:
     gs: list[float] = []
     for i in range(0, h * w):
         gs.append(0.2126 * img_data[i][0] / 255.0
@@ -109,23 +109,38 @@ def main() -> None:
 
     image = Image.open(args.filename)
     # real H / 2
-    k = max(image.width / args.w, image.height / 2.0 / args.e)
-    width = int(image.width / k + 0.5)
-    height = int(image.height / 2.0 / k + 0.5)
-    edge_threshold_square = args.t * args.t
-    value_charset_count = len(value_charset)
+    k: float = max(image.width / args.w, image.height / 2.0 / args.e)
+    width: int = int(image.width / k + 0.5)
+    height: int = int(image.height / 2.0 / k + 0.5)
+    edge_threshold_square: float = args.t * args.t
+    value_charset_count: int = len(value_charset)
     if not args.s:
         print(f"\x1b[2J\x1b[1;1H")
     print(f"{width} {height}")
-    img_data = list(image.resize((width, height)).getdata())  # list of tuples
+    img_data: list[tuple[int, ...]] = list(image.resize((width, height)).getdata())
+    sobel_x: list[float]
+    sobel_y: list[float]
     sobel_x, sobel_y = calc_sobels(grayscale(img_data, width, height), width, height)
 
-    buf = []
-    cbuf = []
+    buf: list[str] = []
+    cbuf: list[str] = []
+    r: int
+    g: int
+    b: int
+    pix_idx: int
+    v: float
+    sx: float
+    sy: float
+    sobel_magnitude_square: float
+    sobel_angle: float
+    b_rgba: bool = bool(len(img_data[0]) > 3)
     for y in range(0, height):
         for x in range(0, width):
             pix_idx = y * width + x
-            r, g, b = img_data[pix_idx]
+            if b_rgba:
+                r, g, b, _ = img_data[pix_idx]
+            else:
+                r, g, b = img_data[pix_idx]
             # h, s, v = rgb2hsv((r,g,b))
             v = (r + g + b) / 765.0 if args.l else max(r, g, b) / 255.0
             sx = sobel_x[pix_idx]

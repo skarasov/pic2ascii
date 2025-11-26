@@ -2,7 +2,8 @@
 
 Python script to convert pictures to colored ascii!
 
-Required - pillow lib
+Required - pillow lib and terminal with support of ANSI escape sequences
+(e.g. WindowsTerminal or Kitty)!
 
 ```
 > python .\main.py -h
